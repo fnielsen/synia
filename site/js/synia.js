@@ -205,39 +205,47 @@ function sparqlToDataTable(sparql, element, options={}) {
     var linkSuffixes = (typeof options.linkSuffixes === 'undefined') ? {} : options.linkSuffixes;
     var paging = (typeof options.paging === 'undefined') ? true : options.paging;
     var sDom = (typeof options.sDom === 'undefined') ? 'lfrtip' : options.sDom;
-    var url = window.configuration.endpoint + "?query=" + 
-	encodeURIComponent(sparql) + '&format=json';
 
-    $.getJSON(url, function(response) {
-	var simpleData = sparqlDataToSimpleData(response);
-
-	convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
-	columns = [];
-	for ( i = 0 ; i < convertedData.columns.length ; i++ ) {
-	    var column = {
-		data: convertedData.columns[i],
-		title: capitalizeFirstLetter(convertedData.columns[i]).replace(/_/g, "&nbsp;"),
-		defaultContent: "",
+    fetch(window.configuration.endpoint, {
+	// query may be too long to fit in the URL with a GET
+	method: 'POST',
+	headers: {
+	    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+	},
+	body: "query=" + encodeURIComponent(sparql) + "&format=json",
+    })
+	.then(response => response.json())
+	.then(response_data => {
+	    var simpleData = sparqlDataToSimpleData(response_data);
+	    
+	    convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
+	    columns = [];
+	    for ( i = 0 ; i < convertedData.columns.length ; i++ ) {
+		var column = {
+		    data: convertedData.columns[i],
+		    title: capitalizeFirstLetter(convertedData.columns[i]).replace(/_/g, "&nbsp;"),
+		    defaultContent: "",
+		}
+		columns.push(column)
 	    }
-	    columns.push(column)
-	}
-
-	table = $(element).DataTable({ 
-	    data: convertedData.data,
-	    columns: columns,
-	    lengthMenu: [[10, 25, 100, -1], [10, 25, 100, "All"]],
-	    ordering: true,
-	    order: [], 
-	    paging: paging,
-	    sDom: sDom,
-	    // language: { url: './libs/datatables/da.json' },
+	    
+	    table = $(element).DataTable({ 
+		data: convertedData.data,
+		columns: columns,
+		lengthMenu: [[10, 25, 100, -1], [10, 25, 100, "All"]],
+		ordering: true,
+		order: [], 
+		paging: paging,
+		sDom: sDom,
+		// language: { url: './libs/datatables/da.json' },
+	    });
+	    
+	    $(element).append(
+		'<caption><a href="' + window.configuration.queryServiceUrl + '/#' + 
+		    encodeURIComponent(sparql) +	
+		    '">Query Service</a></caption>');
+	    
 	});
-
-	$(element).append(
-	    '<caption><a href="' + window.configuration.queryServiceUrl + '/#' + 
-		encodeURIComponent(sparql) +	
-		'">Query Service</a></caption>');
-    });
 }
 
 
@@ -271,9 +279,10 @@ fetch(templateUrl, {
 	if ('revisions' in data.query.pages[0]) {
 	    let template = data.query.pages[0].revisions[0].slots.main.content;
 
-	    const reTemplateParts = /(==.*?==|{{SPARQL\s+.*?}})/sg;
-	    const reHeader = /==(.*?)==/sg;
-	    const reSparqlTemplate = /{{SPARQL\s*\|\s*query\s*=(.*?)}}/sg;
+	    const reTemplateParts = /(=[^=]+?=|==.+?==|{{SPARQL\s+.+?}})/sg;
+	    const reHeader1 = /=(.+?)=/sg;
+	    const reHeader2 = /==(.+?)==/sg;
+	    const reSparqlTemplate = /{{SPARQL\s*\|\s*query\s*=(.+?)}}/sg;
 
 	    // Identify parts in template
 	    let templateParts = template.match(reTemplateParts)
@@ -282,11 +291,20 @@ fetch(templateUrl, {
 	    for (let i = 0; i < templateParts.length; i++) {
 		if (templateParts[i].startsWith("==")) {
 		    // Headers, level 2
-		    let headerString = [...templateParts[i].matchAll(reHeader)][0][1];
+		    let headerString = [...templateParts[i].matchAll(reHeader2)][0][1];
 		    let div = document.createElement("div");
 		    let h2Element = document.createElement("h2");
 		    h2Element.textContent = headerString;
 		    div.append(h2Element);
+		    $('#content').append(div);
+		}
+		else if (templateParts[i].startsWith("=")) {
+		    // Headers, level 1
+		    let headerString = [...templateParts[i].matchAll(reHeader1)][0][1];
+		    let div = document.createElement("div");
+		    let h1Element = document.createElement("h1");
+		    h1Element.textContent = headerString;
+		    div.append(h1Element);
 		    $('#content').append(div);
 		}
 		else if (templateParts[i].startsWith("{{SPARQL")) {
