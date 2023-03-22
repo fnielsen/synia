@@ -206,7 +206,28 @@ function sparqlToDataTable(sparql, element, options={}) {
     var paging = (typeof options.paging === 'undefined') ? true : options.paging;
     var sDom = (typeof options.sDom === 'undefined') ? 'lfrtip' : options.sDom;
 
-    fetch(window.configuration.endpoint, {
+    let endpoint;
+    let queryServiceUrl;
+    if (typeof options.endpoint == 'undefined') {
+	endpoint = window.configuration.endpoint;
+	queryServiceUrl = window.configuration.queryServiceUrl;
+    }
+    else {
+	endpoint = options.endpoint;
+	if (endpoint == window.configuration.endpoint) {
+	    queryServiceUrl = window.configuration.queryServiceUrl;
+	}
+	else {
+	    if (endpoint.endsWith('.wikibase.cloud/query/sparql')) {
+		queryServiceUrl = endpoint.substring(0, endpoint.length - 7);
+	    }
+	    else {
+		queryServiceUrl = null;
+	    }
+	}
+    }
+    
+    fetch(endpoint, {
 	// query may be too long to fit in the URL with a GET
 	method: 'POST',
 	headers: {
@@ -239,11 +260,13 @@ function sparqlToDataTable(sparql, element, options={}) {
 		sDom: sDom,
 		// language: { url: './libs/datatables/da.json' },
 	    });
-	    
-	    $(element).append(
-		'<caption><a href="' + window.configuration.queryServiceUrl + '/#' + 
-		    encodeURIComponent(sparql) +	
-		    '">Query Service</a></caption>');
+
+	    if (queryServiceUrl !== null) {
+		$(element).append(
+		    '<caption><a href="' + queryServiceUrl + '/#' + 
+			encodeURIComponent(sparql) +	
+			'">Query Service</a></caption>');
+	    }
 	    
 	});
 }
@@ -279,17 +302,27 @@ fetch(templateUrl, {
 	if ('revisions' in data.query.pages[0]) {
 	    let template = data.query.pages[0].revisions[0].slots.main.content;
 
-	    const reTemplateParts = /(=[^=]+?=|==.+?==|{{SPARQL\s+.+?}})/sg;
+	    const reTemplateParts = /(=[^=]+?=|==.+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?}})/sg;
 	    const reHeader1 = /=(.+?)=/sg;
 	    const reHeader2 = /==(.+?)==/sg;
-	    const reSparqlTemplate = /{{SPARQL\s*\|\s*query\s*=(.+?)}}/sg;
+	    const reHeader3 = /===(.+?)===/sg;
+	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)}}/sg;
 
 	    // Identify parts in template
 	    let templateParts = template.match(reTemplateParts)
 
 	    // Render parts as specified by the template
 	    for (let i = 0; i < templateParts.length; i++) {
-		if (templateParts[i].startsWith("==")) {
+		if (templateParts[i].startsWith("===")) {
+		    // Headers, level 3
+		    let headerString = [...templateParts[i].matchAll(reHeader3)][0][1];
+		    let div = document.createElement("div");
+		    let h3Element = document.createElement("h3");
+		    h3Element.textContent = headerString;
+		    div.append(h3Element);
+		    $('#content').append(div);
+		}
+		else if (templateParts[i].startsWith("==")) {
 		    // Headers, level 2
 		    let headerString = [...templateParts[i].matchAll(reHeader2)][0][1];
 		    let div = document.createElement("div");
@@ -307,10 +340,19 @@ fetch(templateUrl, {
 		    div.append(h1Element);
 		    $('#content').append(div);
 		}
+		else if (templateParts[i].startsWith("----")) {
+		    // line
+		    let div = document.createElement("div");
+		    let hrElement = document.createElement("hr");
+		    div.append(hrElement);
+		    $('#content').append(div);
+		}
 		else if (templateParts[i].startsWith("{{SPARQL")) {
 		    // SPARQL commands
-		    let sparqlTemplate = [...templateParts[i].matchAll(reSparqlTemplate)][0][1];
-
+		    let sparqlTemplateParts = [...templateParts[i].matchAll(reSparqlTemplate)][0];
+		    let endpoint = (typeof sparqlTemplateParts[2] == "undefined") ? window.configuration.endpoint : sparqlTemplateParts[2];
+		    let sparqlTemplate = sparqlTemplateParts[3];
+		    
 		    // Interpolate q
 		    let sparql;
 		    if ((!aspect.endsWith("-index")) & /-/.test(aspect)) {
@@ -326,7 +368,7 @@ fetch(templateUrl, {
 		    tableElement.setAttribute("id", tableId);
 		    div.append(tableElement);
 		    $('#content').append(div);
-		    sparqlToDataTable(sparql, "#" + tableId);
+		    sparqlToDataTable(sparql, "#" + tableId, {endpoint: endpoint});
 		}
 	    }
 
