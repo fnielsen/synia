@@ -302,11 +302,12 @@ fetch(templateUrl, {
 	if ('revisions' in data.query.pages[0]) {
 	    let template = data.query.pages[0].revisions[0].slots.main.content;
 
-	    const reTemplateParts = /(=[^=]+?=|==.+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?}})/sg;
+	    const reTemplateParts = /(=[^=]+?=|==[^=]+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?}})/sg;
 	    const reHeader1 = /=(.+?)=/sg;
 	    const reHeader2 = /==(.+?)==/sg;
 	    const reHeader3 = /===(.+?)===/sg;
 	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)}}/sg;
+	    const reDefaultView = /#defaultView:/sg;
 
 	    // Identify parts in template
 	    let templateParts = template.match(reTemplateParts)
@@ -361,14 +362,27 @@ fetch(templateUrl, {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, q);
 		    }
 
-		    let div = document.createElement("div");
-		    let tableElement = document.createElement("table");
-		    let tableId = "table-" + (i+1);
-		    tableElement.setAttribute("class", "table table-hover");
-		    tableElement.setAttribute("id", tableId);
-		    div.append(tableElement);
-		    $('#content').append(div);
-		    sparqlToDataTable(sparql, "#" + tableId, {endpoint: endpoint});
+		    if (reDefaultView.test(sparql)) {
+			// Iframe graph rendering
+		    	let div = document.createElement("div");
+			div.setAttribute("class", "embed-responsive embed-responsive-4by3");
+			let iframeElement = document.createElement("iframe");
+			iframeElement.setAttribute("class", "embed-responsive-item");
+			iframeElement.setAttribute("src", "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql));
+			div.append(iframeElement);
+			$('#content').append(div);
+		    }
+		    else {
+			// Table rendering
+			let div = document.createElement("div");
+			let tableElement = document.createElement("table");
+			let tableId = "table-" + (i+1);
+			tableElement.setAttribute("class", "table table-hover");
+			tableElement.setAttribute("id", tableId);
+			div.append(tableElement);
+			$('#content').append(div);
+			sparqlToDataTable(sparql, "#" + tableId, {endpoint: endpoint});
+		    }
 		}
 	    }
 
