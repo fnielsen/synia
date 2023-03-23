@@ -260,6 +260,15 @@ function sparqlToDataTable(sparql, element, options={}) {
 		}
 		columns.push(column)
 	    }
+
+	    const allowedDataTableLanguages = ['da', 'de-DE'];
+	    let dataTableLanguageUrl
+	    if (allowedDataTableLanguages.includes(userLang)) {
+		dataTableLanguageUrl = 'libs/datatables/i18n/' + userLang + '.json';
+	    }
+	    else {
+		dataTableLanguageUrl = null;
+	    }
 	    
 	    table = $(element).DataTable({ 
 		data: convertedData.data,
@@ -269,7 +278,7 @@ function sparqlToDataTable(sparql, element, options={}) {
 		order: [], 
 		paging: paging,
 		sDom: sDom,
-		// language: { url: './libs/datatables/da.json' },
+		language: { url: dataTableLanguageUrl },
 	    });
 
 	    if (queryServiceUrl !== null) {
@@ -282,6 +291,7 @@ function sparqlToDataTable(sparql, element, options={}) {
 	});
 }
 
+let userLang = navigator.language || navigator.userLanguage; 
 
 let namespace = window.configuration.namespace;
 let hash = window.location.hash;
