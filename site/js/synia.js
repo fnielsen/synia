@@ -1,7 +1,7 @@
 function hashToAspect(hash) {
     const reAspectAspect = /#([a-z]+)\/Q\d+\/([a-z]+)\/Q\d+/;
     const reAspectAspectIndex = /#([a-z]+)\/Q\d+\/([a-z]+)/;
-    const reAspect = /#([a-z]+)\/Q\d+/;
+    const reAspect = /#([a-z]+)\/(L|Q)\d+/;
     const reAspectIndex = /#([a-z]+)/;
     let aspect = 'index';
     if (reAspectAspect.test(hash)) {
@@ -26,6 +26,17 @@ function hashToAspect(hash) {
 function hashToQ(hash) {
     const reQ = /#[a-z]+\/(Q\d+)/;
     let matches = reQ.exec(hash);
+    if (matches) {
+	return matches[1];
+    }
+    else {
+	return null;
+    }
+}
+
+function hashToL(hash) {
+    const reL = /#[a-z]+\/(L\d+)/;
+    let matches = reL.exec(hash);
     if (matches) {
 	return matches[1];
     }
@@ -176,10 +187,10 @@ function sparqlTemplateToSparql(sparqlTemplate, q, q2=null) {
 	return sparql;
     }
     // Two targets
-    let regex1 = /(PREFIX target1: <http.*?\/)Q\d+(>)/
-    let regex2 = /(PREFIX target2: <http.*?\/)Q\d+(>)/
-    sparql = sparqlTemplate.replace(regex1, "$1" + q + "$2");
-    sparql = sparql.replace(regex2, "$1" + q2 + "$2");
+    let regex1 = /(PREFIX target1: <http.*?\/)(L|Q)\d+(>)/
+    let regex2 = /(PREFIX target2: <http.*?\/)(L|Q)\d+(>)/
+    sparql = sparqlTemplate.replace(regex1, "$1" + q + "$3");
+    sparql = sparql.replace(regex2, "$1" + q2 + "$3");
     return sparql;
 }
 
@@ -279,7 +290,7 @@ let aspect = hashToAspect(hash);
 let templateUrl = aspectToTemplateUrl(aspect);
 
 // Extract Q identifiers from URI fragment
-let q, q1, q2;
+let l = q = q1 = q2 = null;
 if (aspect.endsWith('-index') & (/-/.test(aspect))) {
     q = hashToQ(hash);
 }
@@ -291,8 +302,10 @@ else if (/-/.test(aspect)) {
 }
 else {
     q = hashToQ(hash);
+    if (q == null) {
+	l = hashToL(hash);
+    }
 }
-
 
 fetch(templateUrl, {
     mode: 'cors'
@@ -356,10 +369,17 @@ fetch(templateUrl, {
 		    
 		    // Interpolate q
 		    let sparql;
-		    if ((!aspect.endsWith("-index")) & /-/.test(aspect)) {
+		    if ((q1 !== null) & (q2 !== null)) {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, q1, q2);
-		    } else {
+		    }
+		    else if (q !== null) {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, q);
+		    }
+		    else if (l !== null) {
+			sparql = sparqlTemplateToSparql(sparqlTemplate, q);
+		    }
+		    else {
+			sparql = sparqlTemplateToSparql(sparqlTemplate, null);
 		    }
 
 		    if (reDefaultView.test(sparql)) {
@@ -368,7 +388,7 @@ fetch(templateUrl, {
 			div.setAttribute("class", "embed-responsive embed-responsive-4by3");
 			let iframeElement = document.createElement("iframe");
 			iframeElement.setAttribute("class", "embed-responsive-item");
-			iframeElement.setAttribute("src", "https://query.wikidata.org/embed.html#" + encodeURIComponent(sparql));
+			iframeElement.setAttribute("src", window.configuration.queryServiceUrl + "/embed.html#" + encodeURIComponent(sparql));
 			div.append(iframeElement);
 			$('#content').append(div);
 		    }
@@ -386,15 +406,6 @@ fetch(templateUrl, {
 		}
 	    }
 
-	    /*
-	      let header_template = document.createElement("h2");
-	      $('#content').append(header_template);
-	      header_template.append("Template");
-
-	      let pre = document.createElement("pre");
-	      $('#content').append(pre);
-	      pre.append(template);
-	    */
 	} else {
 	    let div = document.createElement("div");
 	    div.className = 'alert alert-warning';
