@@ -24,19 +24,8 @@ function hashToAspect(hash) {
 }
 
 function hashToQ(hash) {
-    const reQ = /#[a-z]+\/(Q\d+)/;
+    const reQ = /#[a-z]+\/((L|Q)\d+)/;
     let matches = reQ.exec(hash);
-    if (matches) {
-	return matches[1];
-    }
-    else {
-	return null;
-    }
-}
-
-function hashToL(hash) {
-    const reL = /#[a-z]+\/(L\d+)/;
-    let matches = reL.exec(hash);
     if (matches) {
 	return matches[1];
     }
@@ -182,8 +171,8 @@ function sparqlTemplateToSparql(sparqlTemplate, q, q2=null) {
     }
     if (q2 == null) {
 	// One target
-	let regex = /(PREFIX target: <http.*?\/)Q\d+(>)/
-	sparql = sparqlTemplate.replace(regex, "$1" + q + "$2");
+	let regex = /(PREFIX target: <http.*?\/)(L|Q)\d+(>)/
+	sparql = sparqlTemplate.replace(regex, "$1" + q + "$3");
 	return sparql;
     }
     // Two targets
@@ -300,7 +289,7 @@ let aspect = hashToAspect(hash);
 let templateUrl = aspectToTemplateUrl(aspect);
 
 // Extract Q identifiers from URI fragment
-let l = q = q1 = q2 = null;
+let q = q1 = q2 = null;
 if (aspect.endsWith('-index') & (/-/.test(aspect))) {
     q = hashToQ(hash);
 }
@@ -312,10 +301,8 @@ else if (/-/.test(aspect)) {
 }
 else {
     q = hashToQ(hash);
-    if (q == null) {
-	l = hashToL(hash);
-    }
 }
+
 
 fetch(templateUrl, {
     mode: 'cors'
@@ -385,12 +372,11 @@ fetch(templateUrl, {
 		    else if (q !== null) {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, q);
 		    }
-		    else if (l !== null) {
-			sparql = sparqlTemplateToSparql(sparqlTemplate, q);
-		    }
 		    else {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, null);
 		    }
+
+		    queryServiceUrl = endpoint.substring(0, endpoint.length - 7);
 
 		    if (reDefaultView.test(sparql)) {
 			// Iframe graph rendering
@@ -398,7 +384,7 @@ fetch(templateUrl, {
 			div.setAttribute("class", "embed-responsive embed-responsive-4by3");
 			let iframeElement = document.createElement("iframe");
 			iframeElement.setAttribute("class", "embed-responsive-item");
-			iframeElement.setAttribute("src", window.configuration.queryServiceUrl + "/embed.html#" + encodeURIComponent(sparql));
+			iframeElement.setAttribute("src", queryServiceUrl + "/embed.html#" + encodeURIComponent(sparql));
 			div.append(iframeElement);
 			$('#content').append(div);
 		    }
