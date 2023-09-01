@@ -166,6 +166,7 @@ function entityToLabel(entity, language='en') {
 
 
 function sparqlTemplateToSparql(sparqlTemplate, q, q2=null) {
+    let sparql;
     if (q == null) {
 	return sparqlTemplate;
     }
@@ -317,7 +318,6 @@ fetch(templateUrl, {
 	    const reHeader2 = /==(.+?)==/sg;
 	    const reHeader3 = /===(.+?)===/sg;
 	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)}}/sg;
-	    const reDefaultView = /#defaultView:/sg;
 
 	    // Identify parts in template
 	    let templateParts = template.match(reTemplateParts)
@@ -378,7 +378,7 @@ fetch(templateUrl, {
 
 		    queryServiceUrl = endpoint.substring(0, endpoint.length - 7);
 
-		    if (reDefaultView.test(sparql)) {
+		    if ( /#defaultView:/sg.test(sparql) ) {
 			// Iframe graph rendering
 		    	let div = document.createElement("div");
 			div.setAttribute("class", "embed-responsive embed-responsive-4by3");
