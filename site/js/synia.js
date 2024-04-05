@@ -166,20 +166,23 @@ function entityToLabel(entity, language='en') {
 
 
 function sparqlTemplateToSparql(sparqlTemplate, q, q2=null) {
-    let sparql;
+
+    // Convert the escaped "|" character in the wikitext to a the pipe character
+    let sparql = sparqlTemplate.replaceAll("{{!}}", "|");
+    
     if (q == null) {
-	return sparqlTemplate;
+	return sparql;
     }
     if (q2 == null) {
 	// One target
 	let regex = /(PREFIX target: <http.*?\/)(L|Q)\d+(>)/
-	sparql = sparqlTemplate.replace(regex, "$1" + q + "$3");
+	sparql = sparql.replace(regex, "$1" + q + "$3");
 	return sparql;
     }
     // Two targets
     let regex1 = /(PREFIX target1: <http.*?\/)(L|Q)\d+(>)/
     let regex2 = /(PREFIX target2: <http.*?\/)(L|Q)\d+(>)/
-    sparql = sparqlTemplate.replace(regex1, "$1" + q + "$3");
+    sparql = sparql.replace(regex1, "$1" + q + "$3");
     sparql = sparql.replace(regex2, "$1" + q2 + "$3");
     return sparql;
 }
@@ -313,11 +316,11 @@ fetch(templateUrl, {
 	if ('revisions' in data.query.pages[0]) {
 	    let template = data.query.pages[0].revisions[0].slots.main.content;
 
-	    const reTemplateParts = /(=[^=]+?=|==[^=]+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?}})/sg;
+	    const reTemplateParts = /(=[^=]+?=|==[^=]+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?^}})/gms;
 	    const reHeader1 = /=(.+?)=/sg;
 	    const reHeader2 = /==(.+?)==/sg;
 	    const reHeader3 = /===(.+?)===/sg;
-	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)}}/sg;
+	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)^}}/gms;
 
 	    // Identify parts in template
 	    let templateParts = template.match(reTemplateParts)
