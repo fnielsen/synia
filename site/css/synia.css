@@ -1,3 +1,125 @@
-.container {
+/* Page defaults and the elements emitted by Synia's template renderer. */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+                 "Segoe UI Emoji", "Segoe UI Symbol";
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background: #fff;
+}
+
+.synia-container {
+    width: 100%;
     max-width: 95%;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+h1, h2, h3 {
+    margin: 0 0 0.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+
+hr {
+    margin: 1rem 0;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+/* Let DataTables supply its controls and sorting styles. */
+button, input, select {
+    margin: 0;
+    font: inherit;
+}
+
+label {
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.synia-table {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.synia-table th,
+.synia-table td {
+    padding: 0.75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+
+.synia-table th {
+    text-align: inherit;
+}
+
+.synia-table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.synia-table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.075);
+}
+
+.synia-table caption {
+    padding: 0.75rem 0;
+    color: #6c757d;
+    text-align: left;
+    caption-side: bottom;
+}
+
+.synia-warning {
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ffeeba;
+    border-radius: 0.25rem;
+    color: #856404;
+    background-color: #fff3cd;
+}
+
+/* Query Service visualizations keep their original 4:3 proportions. */
+.synia-embed {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+}
+
+.synia-embed iframe {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
 }

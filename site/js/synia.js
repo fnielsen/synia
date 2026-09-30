@@ -384,9 +384,8 @@ fetch(templateUrl, {
 		    if ( /#defaultView:/sg.test(sparql) ) {
 			// Iframe graph rendering
 		    	let div = document.createElement("div");
-			div.setAttribute("class", "embed-responsive embed-responsive-4by3");
+			div.setAttribute("class", "synia-embed");
 			let iframeElement = document.createElement("iframe");
-			iframeElement.setAttribute("class", "embed-responsive-item");
 			iframeElement.setAttribute("src", queryServiceUrl + "/embed.html#" + encodeURIComponent(sparql));
 			div.append(iframeElement);
 			$('#content').append(div);
@@ -396,7 +395,7 @@ fetch(templateUrl, {
 			let div = document.createElement("div");
 			let tableElement = document.createElement("table");
 			let tableId = "table-" + (i+1);
-			tableElement.setAttribute("class", "table table-hover");
+			tableElement.setAttribute("class", "synia-table");
 			tableElement.setAttribute("id", tableId);
 			div.append(tableElement);
 			$('#content').append(div);
@@ -407,7 +406,7 @@ fetch(templateUrl, {
 
 	} else {
 	    let div = document.createElement("div");
-	    div.className = 'alert alert-warning';
+	    div.className = 'synia-warning';
 	    div.innerHTML = "Missing template for " + aspect +
 		': <a href="' + window.configuration.templateBaseUrl +
 		aspect + '">Define</a>';
@@ -417,4 +416,3 @@ fetch(templateUrl, {
     .catch((error) => {
 	console.log(error);
     });
-
