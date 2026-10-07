@@ -126,7 +126,7 @@ positions are not yet restored.
 ## Layout and components
 
 The header, page body, and footer share a restricted template renderer. The default
-header has a Home link and search; the footer is disabled. Edit `layout` in `config.js`:
+header has a Synia home link and search; the footer is disabled. Edit `layout` in `config.js`:
 
 ```javascript
 layout: {
@@ -146,7 +146,7 @@ Supported syntax in all three regions:
 ```wikitext
 == Heading ==
 Ordinary explanatory text.
-{{Synia link | label = Home | target = # }}
+{{Synia link | label = Synia | target = # }}
 {{Synia link | label = Authors | target = #author }}
 {{Synia link | label = Documentation | target = https://example.org/docs }}
 ----

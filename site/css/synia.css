@@ -111,19 +111,65 @@ label {
     white-space: pre-wrap;
 }
 
-.synia-search, .synia-search-pages {
+.synia-search-pages {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
 }
 
+.synia-search {
+    display: inline-flex;
+    align-items: stretch;
+    width: 26rem;
+    max-width: 100%;
+    min-width: 0;
+    border: 1px solid #adb5bd;
+    border-radius: 0.375rem;
+    background: #fff;
+}
+
 .synia-search input, .synia-search button {
-    padding: 0.35rem 0.5rem;
+    appearance: none;
+    min-height: 2.5rem;
+    padding: 0.375rem 0.65rem;
+    border: 0;
+    line-height: inherit;
+    color: inherit;
 }
 
 .synia-search input {
-    max-width: 100%;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    border-radius: 0.375rem 0 0 0.375rem;
+    background: transparent;
+}
+
+.synia-search button {
+    flex: 0 0 auto;
+    border-left: 1px solid #adb5bd;
+    border-radius: 0 0.375rem 0.375rem 0;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+
+.synia-search button:hover {
+    background: #e9ecef;
+}
+
+.synia-search:focus-within {
+    outline: 2px solid #2269c8;
+    outline-offset: 2px;
+}
+
+.synia-search input:focus {
+    outline: none;
+}
+
+.synia-search button:focus-visible {
+    outline: 2px solid #2269c8;
+    outline-offset: -3px;
 }
 
 .synia-search-results li {
