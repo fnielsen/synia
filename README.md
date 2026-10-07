@@ -88,10 +88,12 @@ preserving hash navigation/reload and native modifier-click behavior.
 
 ## Tests
 
-Run the dependency-free result-rendering checks with Node.js 12 or newer:
+Run the dependency-free result-rendering and variable-scope checks with Node.js
+12 or newer:
 
 ```sh
 node tests/result-rendering.test.cjs
+node tests/variable-scope.test.cjs
 ```
 
 Run the offline endpoint-policy tests with Node.js 18 or newer:
@@ -100,7 +102,7 @@ Run the offline endpoint-policy tests with Node.js 18 or newer:
 node --test tests/query-services.test.cjs
 ```
 
-The endpoint-policy tests use Node's built-in test runner; the result-rendering
-checks use a standalone runner that also works on Node.js 12. Both use mocked
+The endpoint-policy tests use Node's built-in test runner; the other checks
+use standalone runners that also work on Node.js 12. All use mocked
 DOM/network calls, add no runtime dependencies, and do not contact Wikidata or
 another service. These checks do not replace live browser testing.
