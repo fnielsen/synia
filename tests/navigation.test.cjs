@@ -1,0 +1,68 @@
+const assert = require('assert').strict;
+const { setup, flush, page, results } = require('./app-harness.cjs');
+const panel = '{{SPARQL\n| query =\nPREFIX target: <http://www.wikidata.org/entity/Q1>\nSELECT * WHERE {}\n}}';
+
+(async () => {
+    const app = setup('#author/Q42');
+    app.requests[0].respond(page('= First ='));
+    await flush();
+    assert.equal(app.regions.content.textContent.trim(), 'First');
+    app.go('#topic/Q123');
+    app.requests[1].respond(page('= Second ='));
+    await flush();
+    assert.equal(app.regions.content.textContent.trim(), 'Second');
+    app.back();
+    assert(app.requests[2].url.endsWith('author'));
+    app.requests[2].respond(page('= First again ='));
+    await flush();
+    assert.equal(app.regions.content.textContent.trim(), 'First again');
+    app.forward();
+    assert(app.requests[3].url.endsWith('topic'));
+    app.requests[3].respond(page('= Second again ='));
+    await flush();
+    assert.equal(app.regions.content.textContent.trim(), 'Second again');
+    console.log('PASS initial routes, Back and Forward render without reload');
+
+    const stale = setup('#author/Q42');
+    stale.go('#topic/Q123');
+    stale.requests[1].respond(page('= Current ='));
+    await flush();
+    stale.requests[0].respond(page(panel));
+    await flush();
+    assert.equal(stale.requests.length, 2, 'old templates must not launch queries');
+    assert.equal(stale.regions.content.textContent.trim(), 'Current');
+    stale.go('#author/Q5');
+    stale.go('#author/Q6');
+    stale.requests[2].reject(new Error('Old failure'));
+    stale.requests[3].respond(page('= Newest ='));
+    await flush();
+    assert.equal(stale.regions.content.textContent.trim(), 'Newest');
+    console.log('PASS stale template successes and failures cannot change the current route');
+
+    const query = setup('#author/Q42');
+    query.requests[0].respond(page(panel));
+    await flush();
+    assert(new URLSearchParams(query.requests[1].options.body).get('query').includes('/Q42>'));
+    query.go('#topic/Q123');
+    query.requests[2].respond(page(panel));
+    await flush();
+    query.requests[3].respond(results('new'));
+    await flush();
+    query.requests[1].respond(results('old'));
+    await flush();
+    assert.equal(query.tables.length, 1);
+    assert.equal(query.tables[0].options.data[0][0].text, 'new');
+    query.go('#author/Q7');
+    assert.equal(query.tables[0].destroyed, true);
+    console.log('PASS old query responses are ignored and old tables are destroyed');
+
+    const link = query.context.createSafeLink('Refresh current', '#author/Q7');
+    const count = query.requests.length;
+    query.click(link);
+    assert.equal(query.requests.length, count + 1);
+    assert.equal(query.history.length, 3, 'same-route refresh adds no history entry');
+    const modified = query.click(link, { ctrlKey: true });
+    assert.equal(modified.defaultPrevented, undefined);
+    assert.equal(query.requests.length, count + 1);
+    console.log('PASS same-route refresh and native modifier-click behavior');
+})().catch(error => { console.error(error); process.exitCode = 1; });

@@ -28,7 +28,7 @@ async function load(template, configure = () => {}, rejectQuery = false) {
     const tables = [];
     const errors = [];
     const context = vm.createContext({
-        window: { location: { hash: '' } }, navigator: { language: 'en' }, URL,
+        window: { addEventListener() {}, location: { hash: '' } }, navigator: { language: 'en' }, URL,
         console: { log: error => errors.push(error) },
         document: {
             createElement: element,
@@ -37,7 +37,7 @@ async function load(template, configure = () => {}, rejectQuery = false) {
         },
         $: selector => ({
             append: node => (selector === '#content' ? content :
-                nodes.find(node => '#' + node.attributes.id === selector)).append(node),
+                (typeof selector === 'string' ? nodes.find(node => '#' + node.attributes.id === selector) : selector)).append(node),
             DataTable: options => tables.push(options),
         }),
         fetch: async (url, options) => {

@@ -32,11 +32,11 @@ function setup() {
     let resolveTemplate, rejectTemplate;
     const select = selector => nodes.find(node => '#' + node.attributes.id === selector);
     const context = vm.createContext({
-        window: { location: { hash: '#author/Q42' } }, navigator: { language: 'en' }, URL,
+        window: { addEventListener() {}, location: { hash: '#author/Q42' } }, navigator: { language: 'en' }, URL,
         document: { createElement: element, getElementById: () => content, querySelector: select },
         $: selector => ({
             append: node => (selector === '#content' ? content : select(selector)).append(node),
-            DataTable: options => tables.push({ selector, options }),
+            DataTable: options => tables.push({ selector: typeof selector === 'string' ? selector : '#' + selector.attributes.id, options }),
         }),
         fetch: (url, options) => {
             requests.push({ url, options });

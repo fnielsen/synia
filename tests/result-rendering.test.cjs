@@ -37,7 +37,7 @@ function setup() {
     let resolveTemplate;
     const state = { reloads: 0, response: null };
     const context = vm.createContext({
-        window: { location: { hash: '', reload() { state.reloads++; } } },
+        window: { addEventListener() {}, location: { hash: '', reload() { state.reloads++; } } },
         navigator: { language: 'en' }, URL, console,
         document: { createElement: element, getElementById: () => content,
             querySelector: () => table },
@@ -122,12 +122,12 @@ test('reserved variable names remain data and cannot alter prototypes or row att
     assert.equal(converted.data[0].DT_RowAttr, undefined);
 });
 
-test('plain internal clicks reload, including the current hash; modifier clicks stay native', () => {
+test('plain internal clicks navigate without reloading; modifier clicks stay native', () => {
     const link = app.createSafeLink('Item', '#item/Q42');
     const event = { target: link, button: 0, preventDefault() { this.prevented = true; } };
     app.followSyniaLink(event);
     app.followSyniaLink(event);
-    assert.equal(state.reloads, 2);
+    assert.equal(state.reloads, 0);
     assert.equal(app.window.location.hash, '#item/Q42');
     assert.equal(event.prevented, true);
     for (const overrides of [{ ctrlKey: true }, { metaKey: true }, { shiftKey: true },
@@ -137,7 +137,7 @@ test('plain internal clicks reload, including the current hash; modifier clicks 
             preventDefault() { throw new Error('Should preserve native navigation'); },
         }));
     }
-    assert.equal(state.reloads, 2);
+    assert.equal(state.reloads, 0);
 });
 
 test('table integration escapes headings, uses numeric indexes, and registers a listener', async () => {
