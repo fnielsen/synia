@@ -67,8 +67,35 @@ empty allowlist permits no queries.
 This controls destinations chosen by Synia's query renderer, not all networking:
 an approved embedded page can redirect or load its own resources, and SPARQL
 `SERVICE` clauses run at the query server. Only approve trusted embed pages.
-A Content Security Policy is separate follow-up work. Configuration is public
-client-side code; do not put secrets in it.
+The basic Content Security Policy described below does not add a browser-level
+endpoint allowlist. Configuration is public client-side code; do not put secrets in it.
+
+## Content Security Policy
+
+`site/index.html` declares this policy before loading scripts or stylesheets:
+
+```text
+script-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'
+```
+
+Scripts must come from the same origin as Synia, including the bundled jQuery
+and DataTables files. Inline scripts, inline event handlers, and JavaScript
+string evaluation such as `eval()` are blocked. The policy also blocks plugin
+objects, HTML base URL overrides, and form submissions. Keep the policy before
+any resource-loading elements when editing the page.
+
+This deliberately small policy omits `default-src`, `connect-src`, `frame-src`,
+and style restrictions. Query/embed destinations still use the allowlist in
+`site/js/config.js`; changing installations does not require editing the CSP.
+Ordinary HTTP(S) iframe documents use their own CSP, if supplied, and do not
+inherit Synia's script restrictions. Their JavaScript visualizations can still
+run; only embed trusted services.
+
+A meta policy works with static hosting. Report-only testing and restrictions on
+which sites can embed Synia (`frame-ancestors`) require HTTP response headers.
+See the [CSP policy delivery specification](https://www.w3.org/TR/CSP3/#meta-element).
+Browser checks should cover table sorting, search, pagination, internal links,
+and embedded visualizations, with the console checked for unexpected CSP violations.
 
 ## Query-result text and links
 
