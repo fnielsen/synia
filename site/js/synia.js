@@ -195,14 +195,70 @@ function sparqlTemplateToSparql(sparqlTemplate, q, q2=null) {
 }
 
 
+function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function fetchJson(url, options) {
+    let response;
+    try {
+        response = await fetch(url, options);
+    } catch (error) {
+        throw new Error('Request failed (network, CORS, or blocked redirect).');
+    }
+    if (!response.ok) {
+        throw new Error('HTTP ' + response.status + '.');
+    }
+    try {
+        return await response.json();
+    } catch (error) {
+        throw new Error('Could not read response as JSON.');
+    }
+}
+
+function templateContentFromResponse(data) {
+    if (isRecord(data) && isRecord(data.error)) {
+        const detail = typeof data.error.info === 'string' ? data.error.info :
+            typeof data.error.code === 'string' ? data.error.code : 'Unknown error';
+        throw new Error('Template API error: ' + detail);
+    }
+    if (!isRecord(data) || !isRecord(data.query) ||
+        !Array.isArray(data.query.pages) || !isRecord(data.query.pages[0])) {
+        throw new Error('Invalid template API response: expected a page.');
+    }
+    const page = data.query.pages[0];
+    // formatversion=2 uses a boolean; absent revisions alone do not mean missing.
+    if (page.missing === true) {
+        return null;
+    }
+    const revision = Array.isArray(page.revisions) && page.revisions[0];
+    if (!isRecord(revision) || !isRecord(revision.slots) ||
+        !isRecord(revision.slots.main) || typeof revision.slots.main.content !== 'string') {
+        throw new Error('Template content is unavailable or invalid.');
+    }
+    return revision.slots.main.content;
+}
+
 function sparqlDataToSimpleData(response) {
+    if (!isRecord(response) || !isRecord(response.head) ||
+        !Array.isArray(response.head.vars) ||
+        !response.head.vars.every(name => typeof name === 'string') ||
+        !isRecord(response.results) || !Array.isArray(response.results.bindings)) {
+        throw new Error('Invalid SPARQL response: expected SELECT results.');
+    }
     // Convert long JSON data from from SPARQL endpoint to short form
     let data = response.results.bindings;
     let columns = response.head.vars
     var convertedData = [];
     for (var i = 0 ; i < data.length ; i++) {
+	if (!isRecord(data[i])) {
+	    throw new Error('Invalid SPARQL response: expected a result row.');
+	}
 	var convertedRow = Object.create(null);
 	for (const key of Object.keys(data[i])) {
+	    if (!isRecord(data[i][key]) || typeof data[i][key].value !== 'string') {
+		throw new Error('Invalid SPARQL response: expected a binding value.');
+	    }
 	    convertedRow[key] = data[i][key]['value'];
 	}
 	convertedData.push(convertedRow);
@@ -257,7 +313,7 @@ function sparqlToDataTable(sparql, element, options={}) {
 	typeof options.endpoint === 'undefined' ? window.configuration.endpoint : options.endpoint,
 	window.configuration);
     
-    return fetch(service.endpoint, {
+    return fetchJson(service.endpoint, {
 	// query may be too long to fit in the URL with a GET
 	method: 'POST',
 	// A permitted endpoint must not redirect the request to another destination.
@@ -267,11 +323,13 @@ function sparqlToDataTable(sparql, element, options={}) {
 	},
 	body: "query=" + encodeURIComponent(sparql) + "&format=json",
     })
-	.then(response => response.json())
 	.then(response_data => {
 	    var simpleData = sparqlDataToSimpleData(response_data);
 	    
             const convertedData = convertDataTableData(simpleData.data, simpleData.columns);
+            if (convertedData.columns.length === 0) {
+                throw new Error('SPARQL response has no columns to display.');
+            }
             const columns = convertedData.columns.map((name, index) => ({
                 data: index,
                 title: escapeHTML(capitalizeFirstLetter(name).replace(/_/g, '\u00a0')),
@@ -310,7 +368,8 @@ function sparqlToDataTable(sparql, element, options={}) {
 	    }
 	    
 	})
-	.catch(error => showQueryWarning(error, document.querySelector(element).parentElement));
+	.catch(error => showQueryWarning(new Error('SPARQL query failed: ' + error.message),
+            document.querySelector(element).parentElement));
 }
 
 let userLang = navigator.language || navigator.userLanguage; 
@@ -339,13 +398,12 @@ else {
 }
 
 
-fetch(templateUrl, {
+fetchJson(templateUrl, {
     mode: 'cors'
 })
-    .then(response => response.json())
     .then(data => {
-	if ('revisions' in data.query.pages[0]) {
-	    let template = data.query.pages[0].revisions[0].slots.main.content;
+	const template = templateContentFromResponse(data);
+	if (template !== null) {
 
 	    const reTemplateParts = /(=[^=]+?=|==[^=]+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?^}})/gms;
 	    const reHeader1 = /=(.+?)=/sg;
@@ -354,7 +412,10 @@ fetch(templateUrl, {
 	    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)^}}/gms;
 
 	    // Identify parts in template
-	    let templateParts = template.match(reTemplateParts)
+	    let templateParts = template.match(reTemplateParts) || [];
+            if (templateParts.length === 0) {
+                throw new Error('Template contains no supported headings or SPARQL panels.');
+            }
 
 	    // Render parts as specified by the template
 	    for (let i = 0; i < templateParts.length; i++) {
@@ -395,6 +456,10 @@ fetch(templateUrl, {
 		else if (templateParts[i].startsWith("{{SPARQL")) {
 		    // SPARQL commands
 		    let sparqlTemplateParts = [...templateParts[i].matchAll(reSparqlTemplate)][0];
+                    if (!sparqlTemplateParts) {
+                        showQueryWarning(new Error('Malformed SPARQL panel: expected a query parameter.'));
+                        continue;
+                    }
 		    let endpoint = (typeof sparqlTemplateParts[2] == "undefined") ? window.configuration.endpoint : sparqlTemplateParts[2];
 		    let sparqlTemplate = sparqlTemplateParts[3];
 		    
@@ -453,6 +518,5 @@ fetch(templateUrl, {
 	    $('#content').append(div);
 	}
     })
-    .catch((error) => {
-	console.log(error);
-    });
+    .catch(error => showQueryWarning(new Error('Could not load template for ' +
+        aspect + ': ' + error.message)));

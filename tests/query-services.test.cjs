@@ -44,10 +44,10 @@ async function load(template, configure = () => {}, rejectQuery = false) {
             requests.push({ url, options });
             if (options.method === 'POST') {
                 if (rejectQuery) throw new Error('Query request failed (e.g. redirect rejected).');
-                return { json: async () => ({ head: { vars: ['count'] },
+                return { ok: true, json: async () => ({ head: { vars: ['count'] },
                     results: { bindings: [{ count: { value: '1' } }] } }) };
             }
-            return { json: async () => ({ query: { pages: [{ revisions: [
+            return { ok: true, json: async () => ({ query: { pages: [{ revisions: [
                 { slots: { main: { content: template } } },
             ] }] } }) };
         },
@@ -183,5 +183,5 @@ test('fetch rejection produces a visible text warning', async () => {
     const result = await load(panel(), () => {}, true);
     assert.equal(result.queries[0].options.redirect, 'error');
     assert.equal(result.tables.length, 0);
-    assert.match(result.warnings[0].textContent, /request failed/);
+    assert.match(result.warnings[0].textContent, /Request failed/);
 });
