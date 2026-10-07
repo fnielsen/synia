@@ -107,6 +107,25 @@ label {
     background-color: #fff3cd;
 }
 
+.synia-text {
+    white-space: pre-wrap;
+}
+
+#site-header, #site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#site-header:not(:empty), #site-footer:not(:empty) {
+    padding: 0.75rem 0;
+}
+
+#site-header p, #site-footer p {
+    margin: 0;
+}
+
 /* Query Service visualizations keep their original 4:3 proportions. */
 .synia-embed {
     position: relative;
