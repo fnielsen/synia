@@ -17,5 +17,15 @@ window.configuration = {
             queryServiceUrl: "https://query.wikidata.org/",
             embedUrl: "https://query.wikidata.org/embed.html",
         },
+        {
+            endpoint: "https://query-main.wikidata.org/sparql",
+            queryServiceUrl: "https://query-main.wikidata.org/",
+            embedUrl: "https://query-main.wikidata.org/embed.html",
+        },
+        {
+            endpoint: "https://query-scholarly.wikidata.org/sparql",
+            queryServiceUrl: "https://query-scholarly.wikidata.org/",
+            embedUrl: "https://query-scholarly.wikidata.org/embed.html",
+        },
     ],
 };

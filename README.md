@@ -33,9 +33,13 @@ window.configuration = {
 };
 ```
 
-- Add an entry for every trusted service that your templates use. The shipped
-  configuration permits only Wikidata's `https://query.wikidata.org/sparql`.
-  Other services, including Wikibase.cloud installations, require explicit entries.
+- The shipped configuration permits these Wikidata endpoints, each with its
+  corresponding query UI and embed page:
+  - `https://query.wikidata.org/sparql` (default)
+  - `https://query-main.wikidata.org/sparql`
+  - `https://query-scholarly.wikidata.org/sparql`
+- Add an entry for every other trusted service that your templates use, including
+  Wikibase.cloud installations.
 - Matching uses parsed, normalized absolute URLs, including the path, port, and
   query string. It does not permit a whole domain or wildcard subdomains.
 - URLs must use HTTP or HTTPS, without credentials or fragments. HTTP is supported
@@ -48,6 +52,12 @@ window.configuration = {
   Without `queryServiceUrl`, tables have no Query Service caption link; without
   `embedUrl`, a `#defaultView:` panel shows a warning instead of an iframe.
 - Rejected panels display a text warning; later panels can still render.
+
+`https://commons-query.wikimedia.org/sparql` is not included by default.
+[Commons Query Service requires authentication cookies and session redirects](https://commons.wikimedia.org/wiki/Commons:SPARQL_query_service/API_endpoint).
+Synia's cross-origin SPARQL requests do not send those cookies and reject
+redirects, so adding the endpoint to the allowlist alone would not provide Commons
+query support.
 
 Existing installations should add `allowedQueryServices` and move the former
 top-level `queryServiceUrl` into the corresponding entry (use the full UI URL,
