@@ -28,7 +28,10 @@ function setup(hash = '', configure = () => {}) {
         querySelectorAll(tag) {
             const all = [];
             for (const child of this.children) {
-                if (child.tag === tag || (tag[0] === '#' && child.attributes.id === tag.slice(1))) all.push(child);
+                const attr = /^\[([^=\]]+)(?:="([^"]*)")?\]$/.exec(tag);
+                if (child.tag === tag || (tag[0] === '#' && child.attributes.id === tag.slice(1)) ||
+                    (attr && Object.prototype.hasOwnProperty.call(child.attributes, attr[1]) &&
+                    (attr[2] === undefined || child.attributes[attr[1]] === attr[2]))) all.push(child);
                 all.push(...child.querySelectorAll(tag));
             }
             return all;
@@ -58,7 +61,8 @@ function setup(hash = '', configure = () => {}) {
         window: { location, addEventListener: (type, handler) => { events[type] = handler; } },
         document: { readyState: 'complete', createElement: tag => new Element(tag),
             getElementById: id => regions[id] || root.querySelector('#' + id),
-            querySelector: selector => root.querySelector(selector) },
+            querySelector: selector => root.querySelector(selector),
+            querySelectorAll: selector => root.querySelectorAll(selector) },
         $: element => ({ DataTable(options) {
             const entry = { element, options, destroyed: false };
             tables.push(entry);
@@ -75,6 +79,7 @@ function setup(hash = '', configure = () => {}) {
     const script = name => vm.runInContext(fs.readFileSync(path.join(__dirname, '../site/js', name), 'utf8'), context);
     script('config.js'); configure(context.window.configuration);
     script('templates.js');
+    script('search.js');
     script('synia.js');
     return { context, requests, tables, root, regions, history,
         get focused() { return focused; },

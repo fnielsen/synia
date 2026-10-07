@@ -441,9 +441,19 @@ function renderRoute() {
     }
     const view = { active: true, tables: [] };
     activeView = view;
-    const route = routeFromHash(window.location.hash);
     const parent = document.getElementById('content');
     parent.textContent = '';
+    try {
+        const searchRoute = searchRouteFromHash(window.location.hash);
+        if (searchRoute) {
+            syncSearchForms(searchRoute);
+            return renderSearchRoute(searchRoute, parent, view);
+        }
+    } catch (error) {
+        showQueryWarning(error, parent);
+        return Promise.resolve();
+    }
+    const route = routeFromHash(window.location.hash);
     return fetchJson(aspectToTemplateUrl(route.aspect), { mode: 'cors' })
         .then(data => {
             if (!view.active) return;
