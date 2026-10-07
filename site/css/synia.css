@@ -111,6 +111,29 @@ label {
     white-space: pre-wrap;
 }
 
+.synia-search, .synia-search-pages {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.synia-search input, .synia-search button {
+    padding: 0.35rem 0.5rem;
+}
+
+.synia-search input {
+    max-width: 100%;
+}
+
+.synia-search-results li {
+    margin: 1rem 0;
+}
+
+.synia-search-results p {
+    margin: 0.25rem 0;
+}
+
 #site-header, #site-footer {
     display: flex;
     flex-wrap: wrap;

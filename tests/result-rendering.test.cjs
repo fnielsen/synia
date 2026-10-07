@@ -50,6 +50,7 @@ function setup() {
     vm.runInContext(source('config.js'), context);
     context.window.configuration.layout = {};
     vm.runInContext(source('templates.js'), context);
+    vm.runInContext(source('search.js'), context);
     vm.runInContext(source('synia.js'), context);
     return { context, state, nodes, tables, table, content,
         missingTemplate: () => resolveTemplate({ ok: true,

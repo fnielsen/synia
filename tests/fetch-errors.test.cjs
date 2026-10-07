@@ -49,7 +49,7 @@ function setup() {
             return reply instanceof Error ? Promise.reject(reply) : Promise.resolve(reply);
         },
     });
-    for (const name of ['config.js', 'templates.js', 'synia.js']) {
+    for (const name of ['config.js', 'templates.js', 'search.js', 'synia.js']) {
         if (name === 'synia.js') context.window.configuration.layout = {};
         vm.runInContext(readFileSync(join(__dirname, '../site/js', name), 'utf8'), context);
     }

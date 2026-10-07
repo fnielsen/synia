@@ -56,6 +56,7 @@ async function load(template, configure = () => {}, rejectQuery = false) {
     configure(context.window.configuration);
     context.window.configuration.layout = {};
     vm.runInContext(source('templates.js'), context);
+    vm.runInContext(source('search.js'), context);
     vm.runInContext(source('synia.js'), context);
     await new Promise(setImmediate);
     assert.deepEqual(errors, [], 'renderer should not abort');
