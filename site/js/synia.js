@@ -203,6 +203,44 @@ function sparqlDataToSimpleData(response) {
     return {data: convertedData, columns: columns};
 }
 
+// Only installation-owned configuration can authorize query/iframe destinations.
+function normalizeQueryServiceUrl(value) {
+    if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) {
+	throw new Error('Invalid query service URL: ' + value);
+    }
+    const url = new URL(value);
+    if (!['https:', 'http:'].includes(url.protocol) ||
+	url.username || url.password || url.hash || value.includes('#')) {
+	throw new Error('Invalid query service URL: ' + value);
+    }
+    return url.href;
+}
+
+function resolveQueryService(endpoint, configuration) {
+    const url = normalizeQueryServiceUrl(endpoint);
+    const services = configuration.allowedQueryServices;
+    if (!Array.isArray(services)) {
+	throw new Error('Configure allowedQueryServices in js/config.js.');
+    }
+    const service = services.find(service => normalizeQueryServiceUrl(service.endpoint) === url);
+    if (!service) {
+	throw new Error('SPARQL endpoint is not allowed in js/config.js: ' + endpoint);
+    }
+    return {
+	endpoint: url,
+	queryServiceUrl: service.queryServiceUrl == null ? null : normalizeQueryServiceUrl(service.queryServiceUrl),
+	embedUrl: service.embedUrl == null ? null : normalizeQueryServiceUrl(service.embedUrl),
+    };
+}
+
+function showQueryWarning(error, parent = document.getElementById('content')) {
+    const warning = document.createElement('div');
+    warning.className = 'synia-warning';
+    warning.setAttribute('role', 'alert');
+    warning.textContent = error.message;
+    parent.append(warning);
+}
+
 function sparqlToDataTable(sparql, element, options={}) {
     // Options: linkPrefixes={}, linkSuffixes={}, paging=true
     var linkPrefixes = (typeof options.linkPrefixes === 'undefined') ? {} : options.linkPrefixes;
@@ -210,30 +248,15 @@ function sparqlToDataTable(sparql, element, options={}) {
     var paging = (typeof options.paging === 'undefined') ? true : options.paging;
     var sDom = (typeof options.sDom === 'undefined') ? 'lfrtip' : options.sDom;
 
-    let endpoint;
-    let queryServiceUrl;
-    if (typeof options.endpoint == 'undefined') {
-	endpoint = window.configuration.endpoint;
-	queryServiceUrl = window.configuration.queryServiceUrl;
-    }
-    else {
-	endpoint = options.endpoint;
-	if (endpoint == window.configuration.endpoint) {
-	    queryServiceUrl = window.configuration.queryServiceUrl;
-	}
-	else {
-	    if (endpoint.endsWith('.wikibase.cloud/query/sparql')) {
-		queryServiceUrl = endpoint.substring(0, endpoint.length - 7);
-	    }
-	    else {
-		queryServiceUrl = null;
-	    }
-	}
-    }
+    const service = resolveQueryService(
+	typeof options.endpoint === 'undefined' ? window.configuration.endpoint : options.endpoint,
+	window.configuration);
     
-    fetch(endpoint, {
+    return fetch(service.endpoint, {
 	// query may be too long to fit in the URL with a GET
 	method: 'POST',
+	// A permitted endpoint must not redirect the request to another destination.
+	redirect: 'error',
 	headers: {
 	    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
 	},
@@ -274,14 +297,17 @@ function sparqlToDataTable(sparql, element, options={}) {
 		language: { url: dataTableLanguageUrl },
 	    });
 
-	    if (queryServiceUrl !== null) {
-		$(element).append(
-		    '<caption><a href="' + queryServiceUrl + '/#' + 
-			encodeURIComponent(sparql) +	
-			'">Query Service</a></caption>');
+	    if (service.queryServiceUrl !== null) {
+		const caption = document.createElement('caption');
+		const link = document.createElement('a');
+		link.href = service.queryServiceUrl + '#' + encodeURIComponent(sparql);
+		link.textContent = 'Query Service';
+		caption.append(link);
+		$(element).append(caption);
 	    }
 	    
-	});
+	})
+	.catch(error => showQueryWarning(error, document.querySelector(element).parentElement));
 }
 
 let userLang = navigator.language || navigator.userLanguage; 
@@ -379,14 +405,24 @@ fetch(templateUrl, {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, null);
 		    }
 
-		    queryServiceUrl = endpoint.substring(0, endpoint.length - 7);
+		    let service;
+		    const isEmbed = /#defaultView:/.test(sparql);
+		    try {
+			service = resolveQueryService(endpoint, window.configuration);
+			if (isEmbed && service.embedUrl === null) {
+			    throw new Error('No embedUrl configured in js/config.js for: ' + endpoint);
+			}
+		    } catch (error) {
+			showQueryWarning(error);
+			continue;
+		    }
 
-		    if ( /#defaultView:/sg.test(sparql) ) {
+		    if (isEmbed) {
 			// Iframe graph rendering
 		    	let div = document.createElement("div");
 			div.setAttribute("class", "synia-embed");
 			let iframeElement = document.createElement("iframe");
-			iframeElement.setAttribute("src", queryServiceUrl + "/embed.html#" + encodeURIComponent(sparql));
+			iframeElement.setAttribute("src", service.embedUrl + "#" + encodeURIComponent(sparql));
 			div.append(iframeElement);
 			$('#content').append(div);
 		    }
