@@ -8,7 +8,8 @@ const source = name => readFileSync(join(__dirname, '../site/js', name), 'utf8')
 function load(hash) {
     const requests = [];
     const context = vm.createContext({
-        window: { location: { hash } }, navigator: { language: 'en' }, URL,
+        window: { addEventListener() {}, location: { hash } }, navigator: { language: 'en' }, URL,
+        document: { getElementById: () => ({ textContent: '' }) },
         // Existing global properties must not be overwritten by app variables.
         q1: 'existing q1', q2: 'existing q2',
         languages: 'existing languages', lang: 'existing lang',
@@ -29,7 +30,7 @@ const routes = [
 ];
 for (const [hash, aspect, q, q1, q2] of routes) {
     const { context, requests } = load(hash);
-    assert.deepEqual(Array.from(vm.runInContext('[aspect, q, q1, q2]', context)),
+    assert.deepEqual(Array.from(vm.runInContext('Object.values(routeFromHash(window.location.hash))', context)),
         [aspect, q, q1, q2], hash);
     assert.equal(context.q1, 'existing q1');
     assert.equal(context.q2, 'existing q2');

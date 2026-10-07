@@ -111,7 +111,17 @@ Links are built using DOM text and attribute methods. The bundled DataTables 1.x
 requires HTML strings for display, so Synia serializes these DOM-built nodes for
 that interface. Search values are escaped as well; sorting uses the underlying
 text. Internal links use a delegated click listener instead of inline JavaScript,
-preserving hash navigation/reload and native modifier-click behavior.
+preserving hash navigation and native modifier-click behavior.
+
+## Navigation
+
+Synia renders on initial load and on hash changes, including browser Back/Forward.
+Existing hash URLs are unchanged. Internal links update the page without a full
+reload; clicking the current route explicitly refreshes it without adding a
+history entry. Old DataTables are disposed of, and responses/errors for an old
+route are ignored after navigation. Requests already sent may still finish on the
+server. Back/Forward reloads the route's data; table filters, pagination, and scroll
+positions are not yet restored.
 
 ## Request failures
 
@@ -138,6 +148,7 @@ with Node.js 12 or newer:
 node tests/result-rendering.test.cjs
 node tests/variable-scope.test.cjs
 node tests/fetch-errors.test.cjs
+node tests/navigation.test.cjs
 ```
 
 Run the offline endpoint-policy tests with Node.js 18 or newer:
