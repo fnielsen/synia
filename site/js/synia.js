@@ -1,3 +1,5 @@
+'use strict';
+
 function hashToAspect(hash) {
     const reAspectAspect = /#([a-z]+)\/Q\d+\/([a-z]+)\/Q\d+/;
     const reAspectAspectIndex = /#([a-z]+)\/Q\d+\/([a-z]+)/;
@@ -157,9 +159,9 @@ function entityToLabel(entity, language='en') {
     }
 
     // Fallback
-    languages = ['en', 'da', 'de', 'es', 'fr', 'jp',
+    const languages = ['en', 'da', 'de', 'es', 'fr', 'jp',
 		 'nl', 'no', 'ru', 'sv', 'zh'];
-    for (lang in languages) {
+    for (const lang of languages) {
 	if (lang in entity['labels']) {
 	    return entity['labels'][lang].value;
 	}
@@ -320,11 +322,13 @@ let aspect = hashToAspect(hash);
 let templateUrl = aspectToTemplateUrl(aspect);
 
 // Extract Q identifiers from URI fragment
-let q = q1 = q2 = null;
-if (aspect.endsWith('-index') & (/-/.test(aspect))) {
+let q = null;
+let q1 = null;
+let q2 = null;
+if (aspect.endsWith('-index') && (/-/.test(aspect))) {
     q = hashToQ(hash);
 }
-else if (aspect.endsWith('-index') | aspect == "index") {
+else if (aspect.endsWith('-index') || aspect == "index") {
     q = null;
 }
 else if (/-/.test(aspect)) {
@@ -396,7 +400,7 @@ fetch(templateUrl, {
 		    
 		    // Interpolate q
 		    let sparql;
-		    if ((q1 !== null) & (q2 !== null)) {
+		    if ((q1 !== null) && (q2 !== null)) {
 			sparql = sparqlTemplateToSparql(sparqlTemplate, q1, q2);
 		    }
 		    else if (q !== null) {
