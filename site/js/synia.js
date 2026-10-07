@@ -71,78 +71,83 @@ function capitalizeFirstLetter(string) {
 }
 
 
-function convertDataTableData(data, columns, linkPrefixes={}, linkSuffixes={}) {
-    // Handle 'Label' columns.
-
-    // var linkPrefixes = (options && options.linkPrefixes) || {};
-
-    var convertedData = [];
-    var convertedColumns = [];
-    for (var i = 0 ; i < columns.length ; i++) {
-	column = columns[i];
-	if (column.substr(-11) == 'Description') {
-	    convertedColumns.push(column.substr(0, column.length - 11) + ' description');
-	} else if (column.substr(-5) == 'Label') {
-	    // pass
-	} else if (column.substr(-3) == 'Url') {
-	    // pass
-	} else {
-	    convertedColumns.push(column);
-	}
+// Result links support external HTTP(S) URLs and Synia hash routes only.
+function safeLinkUrl(value) {
+    if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) {
+        return null;
     }
-    for (var i = 0 ; i < data.length ; i++) {
-	var convertedRow = {};
-	for (var key in data[i]) {
-	    if (key.substr(-11) == 'Description') {
-		convertedRow[key.substr(0, key.length - 11) + ' description'] = data[i][key];
-
-	    } else if ( (key + 'Label' in data[i]) & (!(key + 'Url' in data[i])) ) {
-		convertedRow[key] = data[i][key + 'Label'];
-	    } else if (key.substr(-5) == 'Label') {
-		// pass
-
-	    } else if (key + 'Url' in data[i]) {
-		if (key + 'Label' in data[i]) {
-		    if (data[i][key + 'Url'].startsWith('http')) {
-			convertedRow[key] = '<a href="' +
-			    data[i][key + 'Url'] +
-			    '">' + data[i][key + 'Label'] + '</a>';
-		    } else {
-			convertedRow[key] = '<a onclick="window.location.hash=\'' +
-			    data[i][key + 'Url'] +
-			    '\'; window.location.reload()" href="' +
-			    data[i][key + 'Url'] +
-			    '">' + data[i][key + 'Label'] + '</a>';
-		    }
-		}
-		else {
-		    if (data[i][key + 'Url'].startsWith('http')) {
-			convertedRow[key] = '<a href="' +
-			    data[i][key + 'Url'] +
-			    '">' + data[i][key] + '</a>';
-		    } else {
-			convertedRow[key] = '<a onclick="window.location.hash=\'' +
-			    data[i][key + 'Url'] +
-			    '\'; window.location.reload()" href="' +
-			    data[i][key + 'Url'] +
-			    '">' + data[i][key] + '</a>';
-		    }
-		}
-	    } else if (key.substr(-3) == 'Url') {
-		// pass
-
-	    } else if (key.substr(-3) == 'url') {
-		// Convert URL to a link
-		convertedRow[key] = "<a onclick='window.location.reload()' href='" +
-		    data[i][key] + "'>" + 
-		    $("<div>").text(data[i][key]).html() + '</a>';
-	    } else {
-		convertedRow[key] = data[i][key];
-	    }
-	}
-	convertedData.push(convertedRow);
+    if (value.startsWith('#')) {
+        return value;
     }
-    return {data: convertedData, columns: convertedColumns}
+    if (!/^https?:\/\//i.test(value)) {
+        return null;
+    }
+    try {
+        const url = new URL(value);
+        return url.username || url.password ? null : url.href;
+    } catch (error) {
+        return null;
+    }
+}
+
+function createSafeLink(text, url) {
+    const href = safeLinkUrl(url);
+    const element = document.createElement(href === null ? 'span' : 'a');
+    element.textContent = text;
+    if (href !== null) {
+        element.setAttribute('href', href);
+    }
+    return element;
+}
+
+function followSyniaLink(event) {
+    if (event.defaultPrevented || event.button !== 0 ||
+        event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+        return;
+    }
+    const link = event.target.closest('a');
+    const href = link && link.getAttribute('href');
+    if (href && href.startsWith('#')) {
+        event.preventDefault();
+        window.location.hash = href;
+        window.location.reload();
+    }
+}
+
+function renderResultCell(cell, type) {
+    const text = cell ? cell.text : '';
+    if (type === 'display') {
+        // DataTables 1.x requires HTML strings: serialize DOM-built nodes only.
+        return createSafeLink(text, cell ? cell.url : null).outerHTML;
+    }
+    // DataTables decodes HTML entities when building its search cache.
+    // Escape filter data too, so that decoding cannot create active elements.
+    return type === 'filter' ? escapeHTML(text) : text;
+}
+
+function convertDataTableData(data, columns) {
+    const visibleColumns = columns.filter(column =>
+        !column.endsWith('Label') && !column.endsWith('Url'));
+    function value(row, key) {
+        return Object.prototype.hasOwnProperty.call(row, key) &&
+            typeof row[key] === 'string' ? row[key] : '';
+    }
+    return {
+        columns: visibleColumns.map(column => column.endsWith('Description') ?
+            column.slice(0, -11) + ' description' : column),
+        // Arrays keep untrusted variable names out of DataTables property paths
+        // and its special DT_Row* metadata properties.
+        data: data.map(row => visibleColumns.map(column => {
+            if (column.endsWith('Description')) {
+                return { text: value(row, column), url: null };
+            }
+            const label = Object.prototype.hasOwnProperty.call(row, column + 'Label') ?
+                value(row, column + 'Label') : value(row, column);
+            const url = Object.prototype.hasOwnProperty.call(row, column + 'Url') ?
+                value(row, column + 'Url') : column.endsWith('url') ? value(row, column) : null;
+            return { text: label, url: url };
+        })),
+    };
 }
 
 
@@ -194,8 +199,8 @@ function sparqlDataToSimpleData(response) {
     let columns = response.head.vars
     var convertedData = [];
     for (var i = 0 ; i < data.length ; i++) {
-	var convertedRow = {};
-	for (var key in data[i]) {
+	var convertedRow = Object.create(null);
+	for (const key of Object.keys(data[i])) {
 	    convertedRow[key] = data[i][key]['value'];
 	}
 	convertedData.push(convertedRow);
@@ -242,9 +247,7 @@ function showQueryWarning(error, parent = document.getElementById('content')) {
 }
 
 function sparqlToDataTable(sparql, element, options={}) {
-    // Options: linkPrefixes={}, linkSuffixes={}, paging=true
-    var linkPrefixes = (typeof options.linkPrefixes === 'undefined') ? {} : options.linkPrefixes;
-    var linkSuffixes = (typeof options.linkSuffixes === 'undefined') ? {} : options.linkSuffixes;
+    // Options: endpoint, paging=true, sDom='lfrtip'
     var paging = (typeof options.paging === 'undefined') ? true : options.paging;
     var sDom = (typeof options.sDom === 'undefined') ? 'lfrtip' : options.sDom;
 
@@ -266,16 +269,13 @@ function sparqlToDataTable(sparql, element, options={}) {
 	.then(response_data => {
 	    var simpleData = sparqlDataToSimpleData(response_data);
 	    
-	    convertedData = convertDataTableData(simpleData.data, simpleData.columns, linkPrefixes=linkPrefixes, linkSuffixes=linkSuffixes);
-	    columns = [];
-	    for ( i = 0 ; i < convertedData.columns.length ; i++ ) {
-		var column = {
-		    data: convertedData.columns[i],
-		    title: capitalizeFirstLetter(convertedData.columns[i]).replace(/_/g, "&nbsp;"),
-		    defaultContent: "",
-		}
-		columns.push(column)
-	    }
+            const convertedData = convertDataTableData(simpleData.data, simpleData.columns);
+            const columns = convertedData.columns.map((name, index) => ({
+                data: index,
+                title: escapeHTML(capitalizeFirstLetter(name).replace(/_/g, '\u00a0')),
+                render: renderResultCell,
+                defaultContent: '',
+            }));
 
 	    const allowedDataTableLanguages = ['da', 'de-DE'];
 	    let dataTableLanguageUrl
@@ -286,7 +286,8 @@ function sparqlToDataTable(sparql, element, options={}) {
 		dataTableLanguageUrl = null;
 	    }
 	    
-	    table = $(element).DataTable({ 
+            document.querySelector(element).addEventListener('click', followSyniaLink);
+	    $(element).DataTable({
 		data: convertedData.data,
 		columns: columns,
 		lengthMenu: [[10, 25, 100, -1], [10, 25, 100, "All"]],
@@ -443,9 +444,8 @@ fetch(templateUrl, {
 	} else {
 	    let div = document.createElement("div");
 	    div.className = 'synia-warning';
-	    div.innerHTML = "Missing template for " + aspect +
-		': <a href="' + window.configuration.templateBaseUrl +
-		aspect + '">Define</a>';
+            div.textContent = "Missing template for " + aspect + ': ';
+            div.append(createSafeLink('Define', window.configuration.templateBaseUrl + aspect));
 	    $('#content').append(div);
 	}
     })

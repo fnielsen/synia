@@ -16,6 +16,7 @@ async function load(template, configure = () => {}, rejectQuery = false) {
         const node = {
             tagName, children: [], attributes: {},
             setAttribute(name, value) { this.attributes[name] = value; },
+            addEventListener() {},
             append(child) { this.children.push(child); child.parentElement = this; },
             set innerHTML(value) { throw new Error('Unexpected HTML insertion: ' + value); },
         };
