@@ -67,10 +67,32 @@ empty allowlist permits no queries.
 This controls destinations chosen by Synia's query renderer, not all networking:
 an approved embedded page can redirect or load its own resources, and SPARQL
 `SERVICE` clauses run at the query server. Only approve trusted embed pages.
-Query-result HTML/link sanitization and a Content Security Policy are separate
-follow-up work. Configuration is public client-side code; do not put secrets in it.
+A Content Security Policy is separate follow-up work. Configuration is public
+client-side code; do not put secrets in it.
+
+## Query-result text and links
+
+Query values, labels, descriptions, and column headings are treated as text, not
+HTML. The existing `Label`, `Description`, `Url`, and lowercase `url` column
+conventions still determine the displayed text and links. Links allow absolute
+HTTP(S) URLs without credentials, or `#...` Synia routes. Other URLs (including
+`javascript:`, `data:`, relative paths, and URLs with unencoded whitespace/control
+characters) display their labels as plain text. Result links may point to any
+HTTP(S) host; the endpoint allowlist controls query/embed destinations separately.
+
+Links are built using DOM text and attribute methods. The bundled DataTables 1.x
+requires HTML strings for display, so Synia serializes these DOM-built nodes for
+that interface. Search values are escaped as well; sorting uses the underlying
+text. Internal links use a delegated click listener instead of inline JavaScript,
+preserving hash navigation/reload and native modifier-click behavior.
 
 ## Tests
+
+Run the dependency-free result-rendering checks with Node.js 12 or newer:
+
+```sh
+node tests/result-rendering.test.cjs
+```
 
 Run the offline endpoint-policy tests with Node.js 18 or newer:
 
@@ -78,5 +100,7 @@ Run the offline endpoint-policy tests with Node.js 18 or newer:
 node --test tests/query-services.test.cjs
 ```
 
-The tests use Node's built-in test runner and mocked DOM/network calls. They add
-no runtime dependencies and do not contact Wikidata or another service.
+The endpoint-policy tests use Node's built-in test runner; the result-rendering
+checks use a standalone runner that also works on Node.js 12. Both use mocked
+DOM/network calls, add no runtime dependencies, and do not contact Wikidata or
+another service. These checks do not replace live browser testing.
