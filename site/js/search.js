@@ -39,16 +39,14 @@ function makeSearchForm(source, placeholder, query = '') {
     form.className = 'synia-search';
     form.setAttribute('role', 'search');
     form.setAttribute('data-search-source', source);
-    const label = document.createElement('label');
-    label.textContent = 'Search ';
     const input = document.createElement('input');
     input.type = 'search';
     input.name = 'q';
+    input.setAttribute('aria-label', 'Search');
     input.maxLength = 512;
     input.placeholder = placeholder || 'Search this knowledge base';
     input.value = query;
-    label.append(input);
-    form.append(label);
+    form.append(input);
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.textContent = 'Search';

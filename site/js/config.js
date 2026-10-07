@@ -8,7 +8,7 @@ window.configuration = {
     // Optional layout: inline text, or { page: "Wikidata:Synia:header" }.
     // Page titles are full titles on templateApiUrl. null disables a region.
     layout: {
-        header: { text: "{{Synia link | label = Home | target = #}}\n{{Synia search}}" },
+        header: { text: "{{Synia link | label = Synia | target = #}}\n{{Synia search}}" },
         footer: null,
     },
 
