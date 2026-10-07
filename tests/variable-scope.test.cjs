@@ -9,13 +9,15 @@ function load(hash) {
     const requests = [];
     const context = vm.createContext({
         window: { addEventListener() {}, location: { hash } }, navigator: { language: 'en' }, URL,
-        document: { getElementById: () => ({ textContent: '' }) },
+        document: { getElementById: () => ({ textContent: '', addEventListener() {} }) },
         // Existing global properties must not be overwritten by app variables.
         q1: 'existing q1', q2: 'existing q2',
         languages: 'existing languages', lang: 'existing lang',
         fetch: url => { requests.push(url); return new Promise(() => {}); },
     });
     vm.runInContext(source('config.js'), context);
+    context.window.configuration.layout = {};
+    vm.runInContext(source('templates.js'), context);
     vm.runInContext(source('synia.js'), context);
     return { context, requests };
 }

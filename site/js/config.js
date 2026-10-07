@@ -5,6 +5,13 @@ window.configuration = {
     templateApiUrl: "https://www.wikidata.org/w/api.php",
     templateBaseUrl: "https://www.wikidata.org/wiki/Wikidata:Synia:",
 
+    // Optional layout: inline text, or { page: "Wikidata:Synia:header" }.
+    // Page titles are full titles on templateApiUrl. null disables a region.
+    layout: {
+        header: { text: "{{Synia link | label = Home | target = #}}" },
+        footer: null,
+    },
+
     // Default SPARQL endpoint; it must also appear in allowedQueryServices.
     endpoint: "https://query.wikidata.org/sparql",
 

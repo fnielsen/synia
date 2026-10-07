@@ -74,6 +74,7 @@ function setup(hash = '', configure = () => {}) {
     });
     const script = name => vm.runInContext(fs.readFileSync(path.join(__dirname, '../site/js', name), 'utf8'), context);
     script('config.js'); configure(context.window.configuration);
+    script('templates.js');
     script('synia.js');
     return { context, requests, tables, root, regions, history,
         get focused() { return focused; },
