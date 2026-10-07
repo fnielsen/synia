@@ -44,13 +44,14 @@ function setup() {
         $: () => ({ append: node => content.append(node),
             DataTable: options => tables.push(options) }),
         fetch: (url, options) => options.method === 'POST' ?
-            Promise.resolve({ json: async () => state.response }) :
+            Promise.resolve({ ok: true, json: async () => state.response }) :
             new Promise(resolve => { resolveTemplate = resolve; }),
     });
     vm.runInContext(source('config.js'), context);
     vm.runInContext(source('synia.js'), context);
     return { context, state, nodes, tables, table, content,
-        missingTemplate: () => resolveTemplate({ json: async () => ({ query: { pages: [{}] } }) }) };
+        missingTemplate: () => resolveTemplate({ ok: true,
+            json: async () => ({ query: { pages: [{ missing: true }] } }) }) };
 }
 
 const { context: app, state } = setup();

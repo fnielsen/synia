@@ -86,14 +86,31 @@ that interface. Search values are escaped as well; sorting uses the underlying
 text. Internal links use a delegated click listener instead of inline JavaScript,
 preserving hash navigation/reload and native modifier-click behavior.
 
+## Request failures
+
+Template and SPARQL table requests check HTTP status before parsing JSON. HTTP
+errors, network failures, invalid JSON, and unexpected response structures show
+plain-text warnings. A failed table query displays its warning beside that table;
+other panels can still render. Browser fetch errors do not reliably distinguish
+network, CORS, and blocked-redirect failures, so their message lists those possibilities.
+
+A missing template retains its Define link. API errors or unavailable revision
+content are reported as failures, rather than mistaken for missing pages. Empty
+templates or templates without supported parts show a warning. Recognized SPARQL
+panels without the expected query parameter are skipped with a warning.
+
+These checks cover requests made by Synia itself, not requests inside an embedded
+query-service iframe. They do not add automatic retries or a request timeout.
+
 ## Tests
 
-Run the dependency-free result-rendering and variable-scope checks with Node.js
-12 or newer:
+Run the dependency-free rendering, variable-scope, and request-failure checks
+with Node.js 12 or newer:
 
 ```sh
 node tests/result-rendering.test.cjs
 node tests/variable-scope.test.cjs
+node tests/fetch-errors.test.cjs
 ```
 
 Run the offline endpoint-policy tests with Node.js 18 or newer:
