@@ -54,6 +54,9 @@ async function load(template, configure = () => {}, rejectQuery = false) {
     });
     vm.runInContext(source('config.js'), context);
     configure(context.window.configuration);
+    context.window.configuration.layout = {};
+    vm.runInContext(source('templates.js'), context);
+    vm.runInContext(source('search.js'), context);
     vm.runInContext(source('synia.js'), context);
     await new Promise(setImmediate);
     assert.deepEqual(errors, [], 'renderer should not abort');
@@ -108,7 +111,7 @@ test('custom wiki, endpoint path and independent UI hosts come only from config'
             embedUrl: 'https://embed.example.org/view?theme=light' }];
     });
     assert.match(result.requests[0].url, /^https:\/\/wiki\.example\.org\/api\.php\?/);
-    assert.match(result.requests[0].url, /titles=Project:Synia:index$/);
+    assert.equal(new URL(result.requests[0].url).searchParams.get('titles'), 'Project:Synia:index');
     assert.equal(result.queries[0].url, endpoint);
     assert.match(result.nodes.find(node => node.tagName === 'a').href, /^https:\/\/ui\.example\.org\/queries#/);
     assert.match(result.frames[0].attributes.src, /^https:\/\/embed\.example\.org\/view\?theme=light#/);

@@ -47,11 +47,16 @@ function hashToQQ(hash) {
     }
 }
 
+function wikiTemplateUrl(page) {
+    const url = new URL(normalizeQueryServiceUrl(window.configuration.templateApiUrl));
+    const parameters = { format: 'json', action: 'query', prop: 'revisions',
+        rvslots: '*', rvprop: 'content', formatversion: '2', origin: '*', titles: page };
+    for (const key of Object.keys(parameters)) url.searchParams.set(key, parameters[key]);
+    return url.href;
+}
+
 function aspectToTemplateUrl(aspect) {
-    let url = window.configuration.templateApiUrl +
-    '?format=json&action=query&prop=revisions&rvslots=*&rvprop=content&formatversion=2&origin=*&titles='
-	+ window.configuration.namespace + aspect;
-    return url;
+    return wikiTemplateUrl(window.configuration.namespace + aspect);
 }
 
 // https://stackoverflow.com/questions/6020714
@@ -404,111 +409,28 @@ function routeFromHash(hash) {
     return { aspect, q, q1, q2 };
 }
 
-function renderWikiTemplate(template, parent, route, view) {
-    const { q, q1, q2 } = route;
-    const reTemplateParts = /(=[^=]+?=|==[^=]+?==|===.+?===|\-\-\-\-|{{SPARQL\s+.+?^}})/gms;
-    const reHeader1 = /=(.+?)=/sg;
-    const reHeader2 = /==(.+?)==/sg;
-    const reHeader3 = /===(.+?)===/sg;
-    const reSparqlTemplate = /{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=(.+?)^}}/gms;
-
-    // Identify parts in template
-    let templateParts = template.match(reTemplateParts) || [];
-    if (templateParts.length === 0) {
-        throw new Error('Template contains no supported headings or SPARQL panels.');
-    }
-
-    // Render parts as specified by the template
-    for (let i = 0; i < templateParts.length; i++) {
-        if (templateParts[i].startsWith("===")) {
-            // Headers, level 3
-            let headerString = [...templateParts[i].matchAll(reHeader3)][0][1];
-            let div = document.createElement("div");
-            let h3Element = document.createElement("h3");
-            h3Element.textContent = headerString;
-            div.append(h3Element);
-            parent.append(div);
-        }
-        else if (templateParts[i].startsWith("==")) {
-            // Headers, level 2
-            let headerString = [...templateParts[i].matchAll(reHeader2)][0][1];
-            let div = document.createElement("div");
-            let h2Element = document.createElement("h2");
-            h2Element.textContent = headerString;
-            div.append(h2Element);
-            parent.append(div);
-        }
-        else if (templateParts[i].startsWith("=")) {
-            // Headers, level 1
-            let headerString = [...templateParts[i].matchAll(reHeader1)][0][1];
-            let div = document.createElement("div");
-            let h1Element = document.createElement("h1");
-            h1Element.textContent = headerString;
-            div.append(h1Element);
-            parent.append(div);
-        }
-        else if (templateParts[i].startsWith("----")) {
-            // line
-            let div = document.createElement("div");
-            let hrElement = document.createElement("hr");
-            div.append(hrElement);
-            parent.append(div);
-        }
-        else if (templateParts[i].startsWith("{{SPARQL")) {
-            // SPARQL commands
-            let sparqlTemplateParts = [...templateParts[i].matchAll(reSparqlTemplate)][0];
-            if (!sparqlTemplateParts) {
-                showQueryWarning(new Error('Malformed SPARQL panel: expected a query parameter.'), parent);
-                continue;
-            }
-            let endpoint = (typeof sparqlTemplateParts[2] == "undefined") ? window.configuration.endpoint : sparqlTemplateParts[2];
-            let sparqlTemplate = sparqlTemplateParts[3];
-
-            // Interpolate q
-            let sparql;
-            if ((q1 !== null) && (q2 !== null)) {
-                sparql = sparqlTemplateToSparql(sparqlTemplate, q1, q2);
-            }
-            else if (q !== null) {
-                sparql = sparqlTemplateToSparql(sparqlTemplate, q);
-            }
-            else {
-                sparql = sparqlTemplateToSparql(sparqlTemplate, null);
-            }
-
-            let service;
-            const isEmbed = /#defaultView:/.test(sparql);
-            try {
-                service = resolveQueryService(endpoint, window.configuration);
-                if (isEmbed && service.embedUrl === null) {
-                    throw new Error('No embedUrl configured in js/config.js for: ' + endpoint);
-                }
-            } catch (error) {
-                showQueryWarning(error, parent);
-                continue;
-            }
-
-            if (isEmbed) {
-                // Iframe graph rendering
-                let div = document.createElement("div");
-                div.setAttribute("class", "synia-embed");
-                let iframeElement = document.createElement("iframe");
-                iframeElement.setAttribute("src", service.embedUrl + "#" + encodeURIComponent(sparql));
-                div.append(iframeElement);
-                parent.append(div);
-            }
-            else {
-                // Table rendering
-                let div = document.createElement("div");
-                let tableElement = document.createElement("table");
-                let tableId = "table-" + (++nextTableId);
-                tableElement.setAttribute("class", "synia-table");
-                tableElement.setAttribute("id", tableId);
-                div.append(tableElement);
-                parent.append(div);
-                sparqlToDataTable(sparql, tableElement, {endpoint: endpoint, view: view});
-            }
-        }
+function renderSparqlPanel(template, parent, route, view) {
+    const parts = /^{{SPARQL\s*\|(\s*endpoint\s*=\s*(.*?)\s*\|)?\s*query\s*=([\s\S]+?)^}}/m.exec(template);
+    if (!parts) throw new Error('Malformed SPARQL panel: expected a query parameter.');
+    const endpoint = parts[2] === undefined ? window.configuration.endpoint : parts[2];
+    const sparql = sparqlTemplateToSparql(parts[3], route.q1 || route.q, route.q2);
+    const service = resolveQueryService(endpoint, window.configuration);
+    const div = document.createElement('div');
+    if (/#defaultView:/.test(sparql)) {
+        if (service.embedUrl === null) throw new Error('No embedUrl configured in js/config.js for: ' + endpoint);
+        div.className = 'synia-embed';
+        const frame = document.createElement('iframe');
+        frame.setAttribute('src', service.embedUrl + '#' + encodeURIComponent(sparql));
+        frame.setAttribute('title', 'Query visualization');
+        div.append(frame);
+        parent.append(div);
+    } else {
+        const table = document.createElement('table');
+        table.setAttribute('class', 'synia-table');
+        table.setAttribute('id', 'table-' + (++nextTableId));
+        div.append(table);
+        parent.append(div);
+        sparqlToDataTable(sparql, table, { endpoint, view });
     }
 }
 
@@ -519,9 +441,19 @@ function renderRoute() {
     }
     const view = { active: true, tables: [] };
     activeView = view;
-    const route = routeFromHash(window.location.hash);
     const parent = document.getElementById('content');
     parent.textContent = '';
+    try {
+        const searchRoute = searchRouteFromHash(window.location.hash);
+        if (searchRoute) {
+            syncSearchForms(searchRoute);
+            return renderSearchRoute(searchRoute, parent, view);
+        }
+    } catch (error) {
+        showQueryWarning(error, parent);
+        return Promise.resolve();
+    }
+    const route = routeFromHash(window.location.hash);
     return fetchJson(aspectToTemplateUrl(route.aspect), { mode: 'cors' })
         .then(data => {
             if (!view.active) return;
@@ -543,6 +475,13 @@ function renderRoute() {
 }
 
 function startSynia() {
+    const layout = window.configuration.layout || {};
+    for (const id of ['site-header', 'content', 'site-footer']) {
+        const region = document.getElementById(id);
+        if (region) region.addEventListener('click', followSyniaLink);
+    }
+    loadLayoutRegion('site-header', layout.header);
+    loadLayoutRegion('site-footer', layout.footer);
     window.addEventListener('hashchange', renderRoute);
     renderRoute();
 }

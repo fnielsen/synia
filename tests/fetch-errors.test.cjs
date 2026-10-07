@@ -49,7 +49,8 @@ function setup() {
             return reply instanceof Error ? Promise.reject(reply) : Promise.resolve(reply);
         },
     });
-    for (const name of ['config.js', 'synia.js']) {
+    for (const name of ['config.js', 'templates.js', 'search.js', 'synia.js']) {
+        if (name === 'synia.js') context.window.configuration.layout = {};
         vm.runInContext(readFileSync(join(__dirname, '../site/js', name), 'utf8'), context);
     }
     return { context, nodes, tables, requests, content,
@@ -134,11 +135,11 @@ test('a genuinely missing template retains its Define link', async () => {
         env.context.window.configuration.templateBaseUrl + 'author');
 });
 
-test('empty or unsupported templates show a useful message', async () => {
-    for (const content of ['', 'Plain text without supported panels']) {
+test('empty templates show a useful message', async () => {
+    for (const content of ['', '   ']) {
         const env = setup();
         await env.template(json(page(content)));
-        assert(env.warnings()[0].textContent.includes('no supported headings or SPARQL panels'));
+        assert(env.warnings()[0].textContent.includes('Template is empty'));
     }
 });
 

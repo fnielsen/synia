@@ -5,6 +5,25 @@ window.configuration = {
     templateApiUrl: "https://www.wikidata.org/w/api.php",
     templateBaseUrl: "https://www.wikidata.org/wiki/Wikidata:Synia:",
 
+    // Optional layout: inline text, or { page: "Wikidata:Synia:header" }.
+    // Page titles are full titles on templateApiUrl. null disables a region.
+    layout: {
+        header: { text: "{{Synia link | label = Home | target = #}}\n{{Synia search}}" },
+        footer: null,
+    },
+
+    // Search APIs are independent of the wiki supplying the templates.
+    defaultSearchProvider: 'entities',
+    searchProviders: {
+        entities: {
+            type: 'wikibase',
+            apiUrl: 'https://www.wikidata.org/w/api.php',
+            language: 'en',
+            entityType: 'item',
+            resultAspect: 'item',
+        },
+    },
+
     // Default SPARQL endpoint; it must also appear in allowedQueryServices.
     endpoint: "https://query.wikidata.org/sparql",
 

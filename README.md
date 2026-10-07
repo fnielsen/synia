@@ -123,6 +123,95 @@ route are ignored after navigation. Requests already sent may still finish on th
 server. Back/Forward reloads the route's data; table filters, pagination, and scroll
 positions are not yet restored.
 
+## Layout and components
+
+The header, page body, and footer share a restricted template renderer. The default
+header has a Home link and search; the footer is disabled. Edit `layout` in `config.js`:
+
+```javascript
+layout: {
+    header: { page: 'Wikidata:Synia:header' },
+    footer: { text: 'This installation uses Wikibase data.' },
+},
+```
+
+Each region accepts exactly one of `page` (a full title on `templateApiUrl`) or
+`text` (inline template text). `null` disables it. Missing `layout` leaves both
+regions empty. Layout loads once per document and stays mounted on navigation;
+its SPARQL is not interpolated with the current entity. A layout error does not
+prevent the main page from loading. No wiki pages are automatically created.
+
+Supported syntax in all three regions:
+
+```wikitext
+== Heading ==
+Ordinary explanatory text.
+{{Synia link | label = Home | target = # }}
+{{Synia link | label = Authors | target = #author }}
+{{Synia link | label = Documentation | target = https://example.org/docs }}
+----
+```
+
+Headings use one to three equals signs on their own line. Text is displayed
+literally, including HTML and unsupported wikitext. Link targets follow the same
+safe HTTP(S)/hash rules as result links. Component parameters are named, validated,
+and cannot contain nested templates except `{{!}}` for a literal pipe. Unknown
+components, unknown parameters, and duplicate parameters show text warnings.
+Components are implemented in repository JavaScript, never executable wiki code.
+This is not a general MediaWiki parser or template-transclusion engine.
+
+Existing `{{SPARQL ...}}` blocks remain supported alongside text and components,
+with their closing `}}` on its own line. Header/footer page choices and network
+permissions belong in installation configuration, not in wiki component arguments.
+
+## Entity search
+
+Use `{{Synia search}}` in a header, footer, or page. Optional `source` selects a
+configured provider and `placeholder` changes the input hint:
+
+```wikitext
+{{Synia search | source = entities | placeholder = Search this knowledge base }}
+```
+
+Search behavior is implemented in Synia's JavaScript. Provider destinations are
+defined only in `config.js`, independently of the wiki serving the templates:
+
+```javascript
+defaultSearchProvider: 'entities',
+searchProviders: {
+    entities: {
+        type: 'wikibase',
+        apiUrl: 'https://your-wikibase.example/w/api.php',
+        language: 'en',
+        entityType: 'item',
+        resultAspect: 'item',
+    },
+},
+```
+
+The default provider searches Wikidata. For another installation, update the search
+API as well as the template/query configuration. Providers use `wbsearchentities`
+for label/alias search. This first version supports `item` and `lexeme`; set
+`resultAspect` to the appropriate local aspect (for example `item`, `author`, or
+`lexeme`). Entity result links use that aspect and validated IDs, never a URL
+supplied by the API. Choose providers whose entities belong to the Wikibase used
+by the installation's templates/queries. Provider names must be own keys in the
+configuration; templates cannot add endpoints or override request actions.
+
+Submitting the accessible search form navigates to
+`#search?q=graph+embeddings&source=entities`. Up to 20 results are requested per
+page; an API continuation adds a Next page link with `offset` in the URL. Back
+from an entity restores the submitted search by refetching results. Search forms
+for that provider are updated to the restored query. Typing alone makes no requests
+or history entries; live autocomplete is not included. Queries are limited to
+512 characters. Blank submissions keep focus in the input.
+
+Requests are anonymous CORS requests to the configured HTTP(S) API, without
+credentials or redirects; that API must permit access from the installation.
+Results, descriptions, and errors are plain text. Unknown providers and malformed
+responses show a warning. Responses from an earlier route are ignored. The form
+handles submission in JavaScript, so the existing `form-action 'none'` CSP remains.
+
 ## Request failures
 
 Template and SPARQL table requests check HTTP status before parsing JSON. HTTP
@@ -133,7 +222,7 @@ network, CORS, and blocked-redirect failures, so their message lists those possi
 
 A missing template retains its Define link. API errors or unavailable revision
 content are reported as failures, rather than mistaken for missing pages. Empty
-templates or templates without supported parts show a warning. Recognized SPARQL
+page templates show a warning. Recognized SPARQL
 panels without the expected query parameter are skipped with a warning.
 
 These checks cover requests made by Synia itself, not requests inside an embedded
@@ -149,6 +238,8 @@ node tests/result-rendering.test.cjs
 node tests/variable-scope.test.cjs
 node tests/fetch-errors.test.cjs
 node tests/navigation.test.cjs
+node tests/templates.test.cjs
+node tests/search.test.cjs
 ```
 
 Run the offline endpoint-policy tests with Node.js 18 or newer:
