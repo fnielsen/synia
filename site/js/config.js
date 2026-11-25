@@ -25,12 +25,18 @@ window.configuration = {
     },
 
     // Default SPARQL endpoint; it must also appear in allowedQueryServices.
-    endpoint: "https://query.wikidata.org/sparql",
+    // Use query-next during the WDQS backend migration (see issue #25).
+    endpoint: "https://query-next.wikidata.org/sparql",
 
     // Templates may select only these exact endpoints (not whole hostnames).
     // Add trusted services here; no destinations are inferred from an endpoint.
     // Omit queryServiceUrl or embedUrl (or set null) if a service lacks that UI.
     allowedQueryServices: [
+        {
+            endpoint: "https://query-next.wikidata.org/sparql",
+            queryServiceUrl: "https://query-next.wikidata.org/",
+            embedUrl: "https://query-next.wikidata.org/embed.html",
+        },
         {
             endpoint: "https://query.wikidata.org/sparql",
             queryServiceUrl: "https://query.wikidata.org/",

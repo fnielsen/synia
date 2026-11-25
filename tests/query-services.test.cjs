@@ -69,20 +69,20 @@ async function load(template, configure = () => {}, rejectQuery = false) {
 test('shipped configuration renders tables and keeps the Wikidata query link', async () => {
     const result = await load(panel());
     assert.equal(result.queries.length, 1);
-    assert.equal(result.queries[0].url, 'https://query.wikidata.org/sparql');
+    assert.equal(result.queries[0].url, 'https://query-next.wikidata.org/sparql');
     assert.equal(result.queries[0].options.redirect, 'error');
     assert.equal(result.tables.length, 1);
     assert.equal(result.warnings.length, 0);
     const query = new URLSearchParams(result.queries[0].options.body).get('query');
     assert.equal(result.nodes.find(node => node.tagName === 'a').href,
-        'https://query.wikidata.org/#' + encodeURIComponent(query));
+        'https://query-next.wikidata.org/#' + encodeURIComponent(query));
 });
 
 test('shipped configuration keeps the Wikidata embed URL', async () => {
     const result = await load(panel('', true));
     assert.equal(result.queries.length, 0);
     assert.equal(result.frames.length, 1);
-    assert.match(result.frames[0].attributes.src, /^https:\/\/query\.wikidata\.org\/embed\.html#/);
+    assert.match(result.frames[0].attributes.src, /^https:\/\/query-next\.wikidata\.org\/embed\.html#/);
 });
 
 test('unlisted destinations cannot create a request or iframe; later panels render', async () => {
