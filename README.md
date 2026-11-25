@@ -35,7 +35,8 @@ window.configuration = {
 
 - The shipped configuration permits these Wikidata endpoints, each with its
   corresponding query UI and embed page:
-  - `https://query.wikidata.org/sparql` (default)
+  - `https://query-next.wikidata.org/sparql` (temporary default during the WDQS backend migration)
+  - `https://query.wikidata.org/sparql`
   - `https://query-main.wikidata.org/sparql`
   - `https://query-scholarly.wikidata.org/sparql`
 - Add an entry for every other trusted service that your templates use, including
